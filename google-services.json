@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "302006417773",
+    "project_id": "vortex-ai-7bb6e",
+    "storage_bucket": "vortex-ai-7bb6e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:302006417773:android:80f97efd1e19102e5f8264",
+        "android_client_info": {
+          "package_name": "com.vortex.ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBud_9sdJQzkGK6anA_PlIlmnNBWT-4hw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

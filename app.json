@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -21,12 +21,24 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#fe591b"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.vortex.ai"
+      "package": "com.vortex.ai",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-notifications"
+    ],
+    "notification": {
+      "color": "#fe591b",
+      "androidMode": "default",
+      "androidCollapsedTitle": "Vortex AI"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "96f1e490-f0e8-4dee-b508-1d023c716168"
+      }
     }
   }
 }

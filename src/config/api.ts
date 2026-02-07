@@ -14,7 +14,9 @@ const getBaseUrl = (): string => {
 };
 
 export const API_CONFIG = {
-  BASE_URL: getBaseUrl(),
+  // Use Vercel production URL
+  BASE_URL: 'https://vortex-ai-backend.vercel.app',
+  // BASE_URL: 'http://192.168.1.8:3001', // Localhost fallback
   
   // Endpoints
   ENDPOINTS: {
@@ -165,7 +167,7 @@ BAHASA:
 export const VORTEX_MODELS = [
   { 
     id: 'vortex-flash', 
-    apiModel: 'gemini-2.5-flash',
+    apiModel: 'gemini-1.5-flash',
     name: 'Vortex Flash', 
     description: 'Model cepat untuk coding dan scripting', 
     badge: 'Fastest',
@@ -174,7 +176,7 @@ export const VORTEX_MODELS = [
   },
   { 
     id: 'vortex-pro', 
-    apiModel: 'gemini-2.5-pro',
+    apiModel: 'gemini-1.5-pro',
     name: 'Vortex Pro', 
     description: 'Model terbaik untuk analisis mendalam & penalaran kompleks', 
     badge: 'Recommended',

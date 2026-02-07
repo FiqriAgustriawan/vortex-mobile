@@ -12,6 +12,15 @@ import { ImageGenScreen } from './src/screens/ImageGenScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { GuestLoginScreen } from './src/screens/GuestLoginScreen';
 import { CookieConsentPopup } from './src/components/CookieConsentPopup';
+import DigestSettingsScreen from './src/screens/DigestSettingsScreen';
+import DigestHistoryScreen from './src/screens/DigestHistoryScreen';
+import DigestDetailScreen from './src/screens/DigestDetailScreen';
+import { setupNotificationResponseListener, setupNotificationReceivedListener } from './src/services/notifications';
+
+// Digest Icon Component
+const DigestIcon = ({ size, color }: { size: number; color: string; focused?: boolean }) => (
+  <Text style={{ fontSize: size - 2 }}>📰</Text>
+);
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -19,8 +28,8 @@ const STORAGE_KEYS = {
   GUEST_DATA: '@vortex_guest_data',
 };
 
-// Screen types
-type Screen = 'home' | 'history' | 'profile' | 'chat' | 'imagegen';
+// Screen types - now includes digest screens
+type Screen = 'home' | 'history' | 'profile' | 'chat' | 'imagegen' | 'digestSettings' | 'digestHistory' | 'digestDetail';
 type AppState = 'loading' | 'onboarding' | 'login' | 'main';
 
 // Guest data type
@@ -44,6 +53,7 @@ function TabBar({
   const tabs = [
     { id: 'home' as Screen, label: 'Explore', Icon: HomeIcon },
     { id: 'imagegen' as Screen, label: 'Imagen', Icon: ImageGenIcon },
+    { id: 'digestSettings' as Screen, label: 'Digest', Icon: DigestIcon },
     { id: 'history' as Screen, label: 'Riwayat', Icon: HistoryIcon },
     { id: 'profile' as Screen, label: 'Profil', Icon: ProfileIcon },
   ];
@@ -184,6 +194,22 @@ function AppContent() {
   }
 
   const renderScreen = () => {
+    // Navigation helper for digest screens
+    const digestNavigation = {
+      navigate: (screen: string, params?: any) => {
+        if (screen === 'DigestSettings') setCurrentScreen('digestSettings');
+        else if (screen === 'DigestHistory') setCurrentScreen('digestHistory');
+        else if (screen === 'DigestDetail') {
+          setChatParams(params || {});
+          setCurrentScreen('digestDetail');
+        }
+      },
+      goBack: () => {
+        if (currentScreen === 'digestDetail') setCurrentScreen('digestHistory');
+        else setCurrentScreen('digestSettings');
+      },
+    };
+
     switch (currentScreen) {
       case 'home':
         return <HomeScreen onNavigateToChat={navigateToChat} guestName={guestData?.username} />;
@@ -202,13 +228,19 @@ function AppContent() {
             guestToken={guestData?.token}
           />
         );
+      case 'digestSettings':
+        return <DigestSettingsScreen navigation={digestNavigation} />;
+      case 'digestHistory':
+        return <DigestHistoryScreen navigation={digestNavigation} />;
+      case 'digestDetail':
+        return <DigestDetailScreen navigation={digestNavigation} route={{ params: { digestId: (chatParams as any).digestId } }} />;
       default:
         return <HomeScreen onNavigateToChat={navigateToChat} guestName={guestData?.username} />;
     }
   };
 
-  // Show tab bar on main screens
-  const showTabBar = !['chat'].includes(currentScreen);
+  // Show tab bar on main screens (hide on chat and digest detail)
+  const showTabBar = !['chat', 'digestDetail', 'digestHistory'].includes(currentScreen);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

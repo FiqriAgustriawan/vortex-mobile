@@ -1,8 +1,14 @@
+
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch,
+  Alert, Platform, NativeModules, DevSettings
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { VortexLogoSimple } from '../components/VortexLogo';
+import { ConfirmModal } from '../components/ConfirmModal';
 import {
   MoonIcon, NotificationIcon, GlobeIcon, StorageIcon, TrashIcon,
   HelpIcon, FeedbackIcon, InfoIcon, SoundIcon, FontSizeIcon, ChevronRightIcon
@@ -58,6 +64,7 @@ const settingsGroups: SettingGroup[] = [
       { id: 'help', IconComponent: HelpIcon, label: 'Pusat Bantuan', type: 'link' },
       { id: 'feedback', IconComponent: FeedbackIcon, label: 'Kirim Feedback', type: 'link' },
       { id: 'about', IconComponent: InfoIcon, label: 'Tentang Aplikasi', type: 'link' },
+      { id: 'reset', IconComponent: TrashIcon, label: 'Reset Aplikasi', type: 'link' },
     ],
   },
 ];
@@ -75,6 +82,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ guestData }) => {
   const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = React.useState(true);
   const [sound, setSound] = React.useState(true);
+  const [resetModalVisible, setResetModalVisible] = React.useState(false);
 
   const getToggleValue = (id: string) => {
     if (id === 'darkmode') return isDarkMode;
@@ -87,6 +95,44 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ guestData }) => {
     if (id === 'darkmode') toggleTheme();
     if (id === 'notifications') setNotifications(!notifications);
     if (id === 'sound') setSound(!sound);
+  };
+
+  const handleResetPress = () => {
+    setResetModalVisible(true);
+  };
+
+  const handleConfirmReset = async () => {
+    try {
+      // 1. Clear explicit keys first
+      const keys = ['@vortex_has_onboarded', '@vortex_guest_data', 'vortex_cookie_consent', 'vortex_cookie_consent_shown'];
+      await AsyncStorage.multiRemove(keys);
+
+      // 2. Clear everything else
+      await AsyncStorage.clear();
+
+      setResetModalVisible(false);
+
+      // 3. Clear Web LocalStorage
+      if (Platform.OS === 'web') {
+        localStorage.clear();
+        window.location.reload();
+        return;
+      }
+
+      // 4. Try to reload mobile app
+      if (NativeModules.DevSettings) {
+        NativeModules.DevSettings.reload();
+      } else if (DevSettings) {
+        DevSettings.reload();
+      } else {
+        // Fallback message
+        Alert.alert('Sukses', 'Data berhasil dihapus. Silakan tutup dan buka kembali aplikasi secara manual.');
+      }
+    } catch (e) {
+      console.error('Reset error:', e);
+      setResetModalVisible(false);
+      Alert.alert('Error', 'Gagal mereset data.');
+    }
   };
 
   const displayName = guestData?.username || 'Pengguna';
@@ -134,7 +180,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ guestData }) => {
                     styles.menuItem,
                     index < group.items.length - 1 && { borderBottomColor: colors.divider, borderBottomWidth: 1 }
                   ]}
-                  onPress={() => item.type === 'toggle' && handleToggle(item.id)}
+                  onPress={() => {
+                    if (item.type === 'toggle') handleToggle(item.id);
+                    if (item.id === 'reset') handleResetPress();
+                  }}
                   disabled={item.type === 'toggle'}
                 >
                   <View style={[styles.menuIconBg, { backgroundColor: colors.surfaceSecondary }]}>
@@ -170,6 +219,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ guestData }) => {
           <Text style={[styles.versionSubtext, { color: colors.textTertiary }]}>Made with love by Vortex Team</Text>
         </View>
       </ScrollView>
+
+      {/* Reset Confirmation Modal */}
+      <ConfirmModal
+        visible={resetModalVisible}
+        title="Reset Aplikasi"
+        message="Tindakan ini akan menghapus semua data lokal, riwayat chat, dan login. Aplikasi akan kembali ke kondisi awal seperti baru diinstall."
+        confirmText="Reset Sekarang"
+        cancelText="Batal"
+        onConfirm={handleConfirmReset}
+        onCancel={() => setResetModalVisible(false)}
+        isDanger={true}
+      />
     </View>
   );
 };

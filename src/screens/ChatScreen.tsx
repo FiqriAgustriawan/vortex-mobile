@@ -282,6 +282,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6));
+            // Check for backend error
+            if (data.error) {
+              console.error('Backend stream error:', data.error);
+              fullText = `⚠️ Error dari AI: ${data.error}`;
+              // Force update message to show error
+              setMessages(prev => prev.map(m =>
+                m.id === botMsgId
+                  ? { ...m, text: fullText, isStreaming: false }
+                  : m
+              ));
+              break; // Stop processing
+            }
+
             if (data.text) {
               fullText += data.text;
               setMessages(prev => prev.map(m =>
