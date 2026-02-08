@@ -23,7 +23,7 @@ export const HomeIcon: React.FC<IconProps & { focused?: boolean }> = ({ size = 2
 );
 
 export const HistoryIcon: React.FC<IconProps & { focused?: boolean }> = ({ size = 24, color, focused }) => (
-  <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} />
+  <Ionicons name={focused ? 'time' : 'time-outline'} size={size} color={color} />
 );
 
 export const ProfileIcon: React.FC<IconProps & { focused?: boolean }> = ({ size = 24, color, focused }) => (
@@ -69,6 +69,14 @@ export const MoonIcon: React.FC<IconProps> = ({ size = 24, color }) => (
   <Ionicons name="moon" size={size} color={color} />
 );
 
+export const SettingsIcon: React.FC<IconProps> = ({ size = 24, color }) => (
+  <Ionicons name="settings-outline" size={size} color={color} />
+);
+
+export const ShareIcon: React.FC<IconProps> = ({ size = 24, color }) => (
+  <Ionicons name="share-social-outline" size={size} color={color} />
+);
+
 export const SunIcon: React.FC<IconProps> = ({ size = 24, color }) => (
   <Ionicons name="sunny" size={size} color={color} />
 );
@@ -87,6 +95,10 @@ export const StorageIcon: React.FC<IconProps> = ({ size = 24, color }) => (
 
 export const TrashIcon: React.FC<IconProps> = ({ size = 24, color }) => (
   <Ionicons name="trash" size={size} color={color} />
+);
+
+export const LogoutIcon: React.FC<IconProps> = ({ size = 24, color }) => (
+  <Ionicons name="log-out-outline" size={size} color={color} />
 );
 
 export const HelpIcon: React.FC<IconProps> = ({ size = 24, color }) => (
@@ -122,6 +134,22 @@ export const ChevronRightIcon: React.FC<IconProps> = ({ size = 24, color }) => (
   <Ionicons name="chevron-forward" size={size} color={color} />
 );
 
+export const ChevronLeftIcon: React.FC<IconProps> = ({ size = 24, color }) => (
+  <Ionicons name="chevron-back" size={size} color={color} />
+);
+
+export const PlusIcon: React.FC<IconProps> = ({ size = 24, color }) => (
+  <Ionicons name="add" size={size} color={color} />
+);
+
+export const UsersIcon: React.FC<IconProps> = ({ size = 24, color }) => (
+  <Ionicons name="people" size={size} color={color} />
+);
+
+export const ChatIcon: React.FC<IconProps & { focused?: boolean }> = ({ size = 24, color, focused }) => (
+  <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} />
+);
+
 // Prompt Icons
 export const LightbulbIcon: React.FC<IconProps> = ({ size = 20, color }) => (
   <Ionicons name="bulb" size={size} color={color} />
@@ -144,6 +172,71 @@ export const CheckmarkIcon: React.FC<IconProps> = ({ size = 20, color = '#10B981
   <Ionicons name="checkmark-circle" size={size} color={color} />
 );
 
+// Topic Icons
+export const TechIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="hardware-chip-outline" size={size} color={color} />
+);
+
+export const BusinessIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="briefcase-outline" size={size} color={color} />
+);
+
+export const SportsIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="football-outline" size={size} color={color} />
+);
+
+export const EntertainmentIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="film-outline" size={size} color={color} />
+);
+
+export const ScienceIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="flask-outline" size={size} color={color} />
+);
+
+export const GamingIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="game-controller-outline" size={size} color={color} />
+);
+
+export const WorldIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="earth-outline" size={size} color={color} />
+);
+
+export const IndonesiaIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="map-outline" size={size} color={color} />
+);
+
 export const ClockIcon: React.FC<IconProps> = ({ size = 20, color }) => (
   <Ionicons name="time" size={size} color={color} />
+);
+
+export const BookIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="book-outline" size={size} color={color} />
+);
+
+export const AlertIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="alert-circle-outline" size={size} color={color} />
+);
+
+export const NewsIcon: React.FC<IconProps & { focused?: boolean }> = ({ size = 24, color, focused }) => (
+  <Ionicons name={focused ? 'newspaper' : 'newspaper-outline'} size={size} color={color} />
+);
+
+export const SaveIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="save-outline" size={size} color={color} />
+);
+
+export const TestIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="flask-outline" size={size} color={color} />
+);
+
+export const ReceiptIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="receipt-outline" size={size} color={color} />
+);
+
+export const KeyIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="key" size={size} color={color} />
+);
+
+export const EditIcon: React.FC<IconProps> = ({ size = 20, color }) => (
+  <Ionicons name="pencil" size={size} color={color} />
 );

@@ -12,6 +12,7 @@ import {
 } from '../components/Icons';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { API_CONFIG } from '../config/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HistoryScreenProps {
   onNavigateToChat: (params?: { modelId?: string; modelName?: string; conversationId?: string }) => void;
@@ -48,11 +49,17 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onNavigateToChat }
   const [error, setError] = useState<string | null>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
+  const { getAuthToken } = useAuth();
 
   const loadConversations = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/conversations`);
+      const token = await getAuthToken();
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/conversations`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setConversations(data.conversations || []);
@@ -88,8 +95,12 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onNavigateToChat }
 
     try {
       console.log('Deleting conversation:', conversationToDelete);
+      const token = await getAuthToken();
       const response = await fetch(`${API_CONFIG.BASE_URL}/api/conversations/${conversationToDelete}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
       console.log('Delete response:', response.status);
       if (response.ok) {

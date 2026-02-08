@@ -14,6 +14,8 @@ import { VoiceInputButton } from '../components/VoiceInputButton';
 import { CustomPromptModal, useCustomPrompt } from '../components/CustomPromptModal';
 import { ThinkingDotsAnimated } from '../components/ThinkingIndicator';
 import * as FileSystem from 'expo-file-system';
+import { useAuth } from '../contexts/AuthContext';
+import Markdown from 'react-native-markdown-display';
 
 interface ChatScreenProps {
   modelName?: string;
@@ -49,6 +51,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   guestToken
 }) => {
   const { colors } = useTheme();
+  const { getAuthToken } = useAuth();
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -104,7 +107,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const loadConversation = async (convId: string) => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/conversations/${convId}`);
+      const token = await getAuthToken();
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/conversations/${convId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         const loadedMessages = data.messages.map((m: any) => ({
@@ -124,11 +132,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const createConversation = async (): Promise<string | null> => {
     try {
+      const token = await getAuthToken();
       const response = await fetch(`${API_CONFIG.BASE_URL}/api/conversations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(guestToken ? { 'Authorization': `Bearer ${guestToken}` } : {})
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: 'Percakapan Baru',
@@ -148,9 +157,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const saveMessage = async (convId: string, role: 'user' | 'assistant', content: string) => {
     try {
+      const token = await getAuthToken();
       await fetch(`${API_CONFIG.BASE_URL}/api/conversations/${convId}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ role, content }),
       });
     } catch (error) {
@@ -391,13 +404,65 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               {msg.image && (
                 <Image source={{ uri: msg.image }} style={styles.msgImage} />
               )}
-              <Text style={[
-                styles.msgText,
-                { color: msg.sender === 'user' ? colors.userBubbleText : colors.aiBubbleText }
-              ]}>
-                {msg.text}
-                {msg.isStreaming && <Text style={styles.cursor}>▋</Text>}
-              </Text>
+              {msg.sender === 'user' ? (
+                <Text style={[
+                  styles.msgText,
+                  { color: colors.userBubbleText }
+                ]}>
+                  {msg.text}
+                </Text>
+              ) : (
+                <Markdown
+                  style={{
+                    body: { color: colors.aiBubbleText, fontSize: 15, lineHeight: 22 },
+                    heading1: { fontSize: 20, fontWeight: 'bold', marginVertical: 8, color: colors.textPrimary },
+                    heading2: { fontSize: 18, fontWeight: 'bold', marginVertical: 6, color: colors.textPrimary },
+                    heading3: { fontSize: 16, fontWeight: 'bold', marginVertical: 4, color: colors.textPrimary },
+                    strong: { fontWeight: 'bold' },
+                    em: { fontStyle: 'italic' },
+                    code_inline: {
+                      backgroundColor: colors.surfaceSecondary,
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      borderRadius: 4,
+                      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                      fontSize: 13,
+                    },
+                    code_block: {
+                      backgroundColor: colors.surfaceSecondary,
+                      padding: 12,
+                      borderRadius: 8,
+                      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                      fontSize: 13,
+                      marginVertical: 8,
+                    },
+                    fence: {
+                      backgroundColor: colors.surfaceSecondary,
+                      padding: 12,
+                      borderRadius: 8,
+                      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                      fontSize: 13,
+                      marginVertical: 8,
+                    },
+                    bullet_list: { marginVertical: 4 },
+                    ordered_list: { marginVertical: 4 },
+                    list_item: { marginVertical: 2 },
+                    blockquote: {
+                      backgroundColor: colors.surfaceSecondary,
+                      borderLeftColor: colors.primary,
+                      borderLeftWidth: 4,
+                      paddingLeft: 12,
+                      paddingVertical: 8,
+                      marginVertical: 8,
+                    },
+                    link: { color: colors.primary },
+                    paragraph: { marginVertical: 4 },
+                  }}
+                >
+                  {msg.text}
+                </Markdown>
+              )}
+              {msg.isStreaming && <Text style={styles.cursor}>▋</Text>}
               <Text style={[
                 styles.msgTime,
                 { color: msg.sender === 'user' ? 'rgba(255,255,255,0.7)' : colors.textTertiary }

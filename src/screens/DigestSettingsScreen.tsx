@@ -12,25 +12,38 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../config/api';
 import {
   registerForPushNotifications,
-  registerTokenWithBackend,
   getDeviceId,
-  scheduleTestNotification,
 } from '../services/notifications';
+import {
+  BackIcon,
+  NewsIcon,
+  TechIcon,
+  BusinessIcon,
+  SportsIcon,
+  EntertainmentIcon,
+  ScienceIcon,
+  GamingIcon,
+  WorldIcon,
+  IndonesiaIcon,
+  SaveIcon,
+  TestIcon,
+  ReceiptIcon
+} from '../components/Icons';
+import { useTheme } from '../theme/ThemeContext';
 
-// Topic options
+// Topic options with Vector Icons
 const TOPICS = [
-  { id: 'technology', label: 'Teknologi', icon: '🔧' },
-  { id: 'business', label: 'Bisnis', icon: '💼' },
-  { id: 'sports', label: 'Olahraga', icon: '⚽' },
-  { id: 'entertainment', label: 'Entertainment', icon: '🎬' },
-  { id: 'science', label: 'Sains', icon: '🔬' },
-  { id: 'gaming', label: 'Gaming', icon: '🎮' },
-  { id: 'world', label: 'Berita Dunia', icon: '🌍' },
-  { id: 'indonesia', label: 'Berita Indonesia', icon: '🇮🇩' },
+  { id: 'technology', label: 'Teknologi', Icon: TechIcon },
+  { id: 'business', label: 'Bisnis', Icon: BusinessIcon },
+  { id: 'sports', label: 'Olahraga', Icon: SportsIcon },
+  { id: 'entertainment', label: 'Entertainment', Icon: EntertainmentIcon },
+  { id: 'science', label: 'Sains', Icon: ScienceIcon },
+  { id: 'gaming', label: 'Gaming', Icon: GamingIcon },
+  { id: 'world', label: 'Berita Dunia', Icon: WorldIcon },
+  { id: 'indonesia', label: 'Berita Indonesia', Icon: IndonesiaIcon },
 ];
 
 // Language options
@@ -58,6 +71,7 @@ interface DigestSettings {
 }
 
 export default function DigestSettingsScreen({ navigation }: any) {
+  const { colors, isDarkMode } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<DigestSettings>({
@@ -104,17 +118,15 @@ export default function DigestSettingsScreen({ navigation }: any) {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      // Register for push notifications if enabling
       let pushToken = null;
       if (settings.enabled) {
         pushToken = await registerForPushNotifications();
         if (!pushToken) {
           Alert.alert(
-            'Notifikasi',
-            'Tidak dapat mengaktifkan notifikasi. Pastikan izin notifikasi diaktifkan di pengaturan HP.'
+            'Perhatian (Mode Expo Go)',
+            'Notifikasi push tidak tersedia di mode Expo Go/Simulator. Settings tetap disimpan.',
+            [{ text: 'Lanjut Simpan', style: 'default' }]
           );
-          setSaving(false);
-          return;
         }
       }
 
@@ -148,14 +160,11 @@ export default function DigestSettingsScreen({ navigation }: any) {
         ? prev.topics.filter((t) => t !== topicId)
         : [...prev.topics, topicId];
 
-      // Ensure at least one topic is selected
       if (newTopics.length === 0) return prev;
-      // Max 5 topics
       if (newTopics.length > 5) {
         Alert.alert('Maksimal 5 Topik', 'Kamu hanya bisa memilih maksimal 5 topik.');
         return prev;
       }
-
       return { ...prev, topics: newTopics };
     });
   };
@@ -193,63 +202,67 @@ export default function DigestSettingsScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#fe591b" />
-          <Text style={styles.loadingText}>Memuat pengaturan...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Memuat pengaturan...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>←</Text>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: colors.surface }]}>
+            <BackIcon size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Daily Digest</Text>
+          <View style={styles.headerTitleContainer}>
+            <NewsIcon size={24} color={colors.primary} />
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Daily Digest</Text>
+          </View>
           <View style={{ width: 40 }} />
         </View>
 
         {/* Enable Toggle */}
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <View style={styles.toggleRow}>
             <View>
-              <Text style={styles.sectionTitle}>Aktifkan Digest</Text>
-              <Text style={styles.sectionSubtitle}>Terima rangkuman berita harian</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Aktifkan Digest</Text>
+              <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Terima rangkuman berita harian</Text>
             </View>
             <Switch
               value={settings.enabled}
               onValueChange={(value) => setSettings((prev) => ({ ...prev, enabled: value }))}
-              trackColor={{ false: '#3e3e3e', true: '#fe591b' }}
-              thumbColor={settings.enabled ? '#fff' : '#888'}
+              trackColor={{ false: colors.surfaceSecondary, true: colors.primary }}
+              thumbColor={settings.enabled ? '#fff' : '#f4f3f4'}
             />
           </View>
         </View>
 
         {/* Schedule Time */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Waktu Pengiriman</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Waktu Pengiriman</Text>
           <TouchableOpacity
-            style={styles.selector}
+            style={[styles.selector, { backgroundColor: colors.surfaceSecondary }]}
             onPress={() => setShowTimeModal(!showTimeModal)}
           >
-            <Text style={styles.selectorText}>🕐 {settings.scheduleTime}</Text>
-            <Text style={styles.selectorArrow}>▼</Text>
+            <Text style={[styles.selectorText, { color: colors.textPrimary }]}>🕐 {settings.scheduleTime}</Text>
+            <Text style={[styles.selectorArrow, { color: colors.textSecondary }]}>▼</Text>
           </TouchableOpacity>
 
           {showTimeModal && (
-            <View style={styles.optionsContainer}>
+            <View style={[styles.optionsContainer, { backgroundColor: colors.surfaceSecondary }]}>
               <ScrollView style={styles.optionsScroll} nestedScrollEnabled>
                 {TIME_OPTIONS.map((time) => (
                   <TouchableOpacity
                     key={time.value}
                     style={[
                       styles.optionItem,
-                      settings.scheduleTime === time.value && styles.optionItemSelected,
+                      { borderBottomColor: colors.border },
+                      settings.scheduleTime === time.value && { backgroundColor: colors.primary + '15' },
                     ]}
                     onPress={() => {
                       setSettings((prev) => ({ ...prev, scheduleTime: time.value }));
@@ -259,7 +272,8 @@ export default function DigestSettingsScreen({ navigation }: any) {
                     <Text
                       style={[
                         styles.optionText,
-                        settings.scheduleTime === time.value && styles.optionTextSelected,
+                        { color: colors.textPrimary },
+                        settings.scheduleTime === time.value && { color: colors.primary, fontWeight: '600' },
                       ]}
                     >
                       {time.label}
@@ -272,27 +286,28 @@ export default function DigestSettingsScreen({ navigation }: any) {
         </View>
 
         {/* Language Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bahasa Digest</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Bahasa Digest</Text>
           <TouchableOpacity
-            style={styles.selector}
+            style={[styles.selector, { backgroundColor: colors.surfaceSecondary }]}
             onPress={() => setShowLanguageModal(!showLanguageModal)}
           >
-            <Text style={styles.selectorText}>
+            <Text style={[styles.selectorText, { color: colors.textPrimary }]}>
               {LANGUAGES.find((l) => l.code === settings.language)?.flag}{' '}
               {LANGUAGES.find((l) => l.code === settings.language)?.label}
             </Text>
-            <Text style={styles.selectorArrow}>▼</Text>
+            <Text style={[styles.selectorArrow, { color: colors.textSecondary }]}>▼</Text>
           </TouchableOpacity>
 
           {showLanguageModal && (
-            <View style={styles.optionsContainer}>
+            <View style={[styles.optionsContainer, { backgroundColor: colors.surfaceSecondary }]}>
               {LANGUAGES.map((lang) => (
                 <TouchableOpacity
                   key={lang.code}
                   style={[
                     styles.optionItem,
-                    settings.language === lang.code && styles.optionItemSelected,
+                    { borderBottomColor: colors.border },
+                    settings.language === lang.code && { backgroundColor: colors.primary + '15' },
                   ]}
                   onPress={() => {
                     setSettings((prev) => ({ ...prev, language: lang.code }));
@@ -302,7 +317,8 @@ export default function DigestSettingsScreen({ navigation }: any) {
                   <Text
                     style={[
                       styles.optionText,
-                      settings.language === lang.code && styles.optionTextSelected,
+                      { color: colors.textPrimary },
+                      settings.language === lang.code && { color: colors.primary, fontWeight: '600' },
                     ]}
                   >
                     {lang.flag} {lang.label}
@@ -314,63 +330,73 @@ export default function DigestSettingsScreen({ navigation }: any) {
         </View>
 
         {/* Topic Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pilih Topik (max 5)</Text>
-          <Text style={styles.sectionSubtitle}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Pilih Topik (max 5)</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
             Dipilih: {settings.topics.length}/5
           </Text>
           <View style={styles.topicsGrid}>
-            {TOPICS.map((topic) => (
-              <TouchableOpacity
-                key={topic.id}
-                style={[
-                  styles.topicChip,
-                  settings.topics.includes(topic.id) && styles.topicChipSelected,
-                ]}
-                onPress={() => toggleTopic(topic.id)}
-              >
-                <Text style={styles.topicIcon}>{topic.icon}</Text>
-                <Text
+            {TOPICS.map((topic) => {
+              const isSelected = settings.topics.includes(topic.id);
+              return (
+                <TouchableOpacity
+                  key={topic.id}
                   style={[
-                    styles.topicLabel,
-                    settings.topics.includes(topic.id) && styles.topicLabelSelected,
+                    styles.topicChip,
+                    { backgroundColor: colors.surfaceSecondary, borderColor: 'transparent' },
+                    isSelected && { backgroundColor: colors.primary + '15', borderColor: colors.primary },
                   ]}
+                  onPress={() => toggleTopic(topic.id)}
                 >
-                  {topic.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <topic.Icon size={18} color={isSelected ? colors.primary : colors.textSecondary} />
+                  <Text
+                    style={[
+                      styles.topicLabel,
+                      { color: colors.textSecondary },
+                      isSelected && { color: colors.primary, fontWeight: '600' },
+                    ]}
+                  >
+                    {topic.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* Custom Prompt */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Instruksi Kustom (Opsional)</Text>
-          <Text style={styles.sectionSubtitle}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Instruksi Kustom (Opsional)</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
             Contoh: "Fokus berita startup Indonesia"
           </Text>
           <TextInput
-            style={styles.customPromptInput}
+            style={[styles.customPromptInput, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary }]}
             value={settings.customPrompt}
             onChangeText={(text) => setSettings((prev) => ({ ...prev, customPrompt: text }))}
             placeholder="Tulis instruksi tambahan..."
-            placeholderTextColor="#666"
+            placeholderTextColor={colors.textTertiary}
             multiline
             maxLength={500}
           />
         </View>
 
+
+
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={[styles.saveButton, saving && styles.buttonDisabled]}
+            style={[styles.saveButton, { backgroundColor: colors.primary }, saving && styles.buttonDisabled]}
             onPress={saveSettings}
             disabled={saving}
           >
             {saving ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveButtonText}>💾 Simpan Pengaturan</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <SaveIcon size={20} color="#fff" />
+                <Text style={[styles.saveButtonText, { marginLeft: 8 }]}>Simpan Pengaturan</Text>
+              </View>
             )}
           </TouchableOpacity>
 
@@ -379,18 +405,26 @@ export default function DigestSettingsScreen({ navigation }: any) {
             onPress={testDigest}
             disabled={saving}
           >
-            <Text style={styles.testButtonText}>🧪 Test Digest Sekarang</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TestIcon size={20} color="#fff" />
+              <Text style={[styles.testButtonText, { marginLeft: 8 }]}>Test Digest Sekarang</Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.historyButton}
+            style={[styles.historyButton, { backgroundColor: colors.surface, borderColor: colors.surfaceSecondary }]}
             onPress={() => navigation.navigate('DigestHistory')}
           >
-            <Text style={styles.historyButtonText}>📜 Lihat History Digest</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <ReceiptIcon size={20} color={colors.textSecondary} />
+              <Text style={[styles.historyButtonText, { color: colors.textSecondary, marginLeft: 8 }]}>Lihat History Digest</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ paddingBottom: 40, alignItems: 'center' }}>
+          <Text style={{ color: colors.textTertiary, fontSize: 10 }}>User ID: {userId}</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -399,7 +433,6 @@ export default function DigestSettingsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
   },
   scrollView: {
     flex: 1,
@@ -411,7 +444,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#888',
     marginTop: 10,
   },
   header: {
@@ -419,26 +451,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 16,
+    borderBottomWidth: 1,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2a2a2a',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 20,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    marginLeft: 8,
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   section: {
-    backgroundColor: '#2a2a2a',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -446,12 +477,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: '#888',
     marginBottom: 12,
   },
   toggleRow: {
@@ -463,20 +492,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#3a3a3a',
     padding: 14,
     borderRadius: 12,
   },
   selectorText: {
-    color: '#fff',
     fontSize: 15,
   },
   selectorArrow: {
-    color: '#888',
     fontSize: 12,
   },
   optionsContainer: {
-    backgroundColor: '#3a3a3a',
     borderRadius: 12,
     marginTop: 8,
     maxHeight: 200,
@@ -488,18 +513,9 @@ const styles = StyleSheet.create({
   optionItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#4a4a4a',
-  },
-  optionItemSelected: {
-    backgroundColor: '#fe591b20',
   },
   optionText: {
-    color: '#fff',
     fontSize: 14,
-  },
-  optionTextSelected: {
-    color: '#fe591b',
-    fontWeight: '600',
   },
   topicsGrid: {
     flexDirection: 'row',
@@ -509,34 +525,18 @@ const styles = StyleSheet.create({
   topicChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3a3a3a',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  topicChipSelected: {
-    backgroundColor: '#fe591b20',
-    borderColor: '#fe591b',
-  },
-  topicIcon: {
-    fontSize: 16,
-    marginRight: 6,
   },
   topicLabel: {
-    color: '#888',
     fontSize: 13,
-  },
-  topicLabelSelected: {
-    color: '#fe591b',
-    fontWeight: '600',
+    marginLeft: 6,
   },
   customPromptInput: {
-    backgroundColor: '#3a3a3a',
     borderRadius: 12,
     padding: 14,
-    color: '#fff',
     fontSize: 14,
     minHeight: 80,
     textAlignVertical: 'top',
@@ -545,7 +545,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   saveButton: {
-    backgroundColor: '#fe591b',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -567,15 +566,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   historyButton: {
-    backgroundColor: '#2a2a2a',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#3a3a3a',
   },
   historyButtonText: {
-    color: '#888',
     fontSize: 15,
   },
   buttonDisabled: {

@@ -2,11 +2,11 @@
   "expo": {
     "name": "Vortex AI",
     "slug": "vortex-ai",
+    "scheme": "vortexai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -22,18 +22,17 @@
         "backgroundColor": "#fe591b"
       },
       "package": "com.vortex.ai",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "pan",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ],
+      "useNextNotificationsApi": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "expo-notifications"
-    ],
-    "notification": {
-      "color": "#fe591b",
-      "androidMode": "default",
-      "androidCollapsedTitle": "Vortex AI"
     },
     "extra": {
       "eas": {

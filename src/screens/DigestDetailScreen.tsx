@@ -12,6 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_CONFIG } from '../config/api';
 import { getDeviceId } from '../services/notifications';
+import { BackIcon, ShareIcon, BookIcon, AlertIcon } from '../components/Icons';
+import { useTheme } from '../theme/ThemeContext';
 
 interface DigestDetail {
   _id: string;
@@ -37,6 +39,7 @@ const TOPIC_LABELS: Record<string, string> = {
 };
 
 export default function DigestDetailScreen({ route, navigation }: any) {
+  const { colors } = useTheme();
   const { digestId } = route.params;
   const [loading, setLoading] = useState(true);
   const [digest, setDigest] = useState<DigestDetail | null>(null);
@@ -104,37 +107,37 @@ export default function DigestDetailScreen({ route, navigation }: any) {
       // Headers
       if (line.startsWith('# ')) {
         return (
-          <Text key={index} style={styles.h1}>
+          <Text key={index} style={[styles.h1, { color: colors.textPrimary }]}>
             {line.substring(2)}
           </Text>
         );
       }
       if (line.startsWith('## ')) {
         return (
-          <Text key={index} style={styles.h2}>
+          <Text key={index} style={[styles.h2, { color: colors.primary }]}>
             {line.substring(3)}
           </Text>
         );
       }
       if (line.startsWith('### ')) {
         return (
-          <Text key={index} style={styles.h3}>
+          <Text key={index} style={[styles.h3, { color: colors.textSecondary }]}>
             {line.substring(4)}
           </Text>
         );
       }
       // Horizontal rule
       if (line.startsWith('---')) {
-        return <View key={index} style={styles.hr} />;
+        return <View key={index} style={[styles.hr, { backgroundColor: colors.border }]} />;
       }
       // Bold text (simplified)
       if (line.includes('**')) {
         const parts = line.split(/\*\*(.*?)\*\*/g);
         return (
-          <Text key={index} style={styles.paragraph}>
+          <Text key={index} style={[styles.paragraph, { color: colors.textPrimary }]}>
             {parts.map((part, i) =>
               i % 2 === 1 ? (
-                <Text key={i} style={styles.bold}>{part}</Text>
+                <Text key={i} style={[styles.bold, { color: colors.textPrimary }]}>{part}</Text>
               ) : (
                 part
               )
@@ -148,7 +151,7 @@ export default function DigestDetailScreen({ route, navigation }: any) {
       }
       // Regular paragraph
       return (
-        <Text key={index} style={styles.paragraph}>
+        <Text key={index} style={[styles.paragraph, { color: colors.textSecondary }]}>
           {line}
         </Text>
       );
@@ -157,10 +160,10 @@ export default function DigestDetailScreen({ route, navigation }: any) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#fe591b" />
-          <Text style={styles.loadingText}>Memuat digest...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Memuat digest...</Text>
         </View>
       </SafeAreaView>
     );
@@ -168,15 +171,15 @@ export default function DigestDetailScreen({ route, navigation }: any) {
 
   if (!digest) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>😢</Text>
-          <Text style={styles.errorText}>Digest tidak ditemukan</Text>
+          <AlertIcon size={64} color={colors.textTertiary} />
+          <Text style={[styles.errorText, { color: colors.textSecondary }]}>Digest tidak ditemukan</Text>
           <TouchableOpacity
-            style={styles.backButtonLarge}
+            style={[styles.backButtonLarge, { backgroundColor: colors.primary }]}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.backButtonLargeText}>Kembali</Text>
+            <Text style={[styles.backButtonLargeText, { color: colors.surface }]}>Kembali</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -184,26 +187,26 @@ export default function DigestDetailScreen({ route, navigation }: any) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>←</Text>
+      <View style={[styles.header, { borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: colors.surface }]}>
+          <BackIcon size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Digest</Text>
-        <TouchableOpacity onPress={shareDigest} style={styles.shareButton}>
-          <Text style={styles.shareButtonText}>📤</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Digest</Text>
+        <TouchableOpacity onPress={shareDigest} style={[styles.shareButton, { backgroundColor: colors.surface }]}>
+          <ShareIcon size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Meta info */}
         <View style={styles.metaSection}>
-          <Text style={styles.dateText}>{formatDate(digest.sentAt)}</Text>
+          <Text style={[styles.dateText, { color: colors.textSecondary }]}>{formatDate(digest.sentAt)}</Text>
           <View style={styles.topicsRow}>
             {digest.topics.map((topic) => (
-              <View key={topic} style={styles.topicBadge}>
-                <Text style={styles.topicBadgeText}>
+              <View key={topic} style={[styles.topicBadge, { backgroundColor: colors.primary + '20' }]}>
+                <Text style={[styles.topicBadgeText, { color: colors.primary }]}>
                   {TOPIC_LABELS[topic] || topic}
                 </Text>
               </View>
@@ -212,24 +215,27 @@ export default function DigestDetailScreen({ route, navigation }: any) {
         </View>
 
         {/* Content */}
-        <View style={styles.contentSection}>
+        <View style={[styles.contentSection, { backgroundColor: colors.surface }]}>
           {renderMarkdown(digest.content)}
         </View>
 
         {/* Sources */}
         {digest.sources && digest.sources.length > 0 && (
-          <View style={styles.sourcesSection}>
-            <Text style={styles.sourcesTitle}>📚 Sumber</Text>
+          <View style={[styles.sourcesSection, { backgroundColor: colors.surface }]}>
+            <View style={styles.sourcesHeader}>
+              <BookIcon size={20} color={colors.textPrimary} />
+              <Text style={[styles.sourcesTitle, { color: colors.textPrimary, marginLeft: 8 }]}>Sumber</Text>
+            </View>
             {digest.sources.map((source, index) => (
               <TouchableOpacity
                 key={index}
-                style={styles.sourceItem}
+                style={[styles.sourceItem, { backgroundColor: colors.surfaceSecondary }]}
                 onPress={() => openSource(source.url)}
               >
-                <Text style={styles.sourceTitle} numberOfLines={2}>
+                <Text style={[styles.sourceTitle, { color: colors.textPrimary }]} numberOfLines={2}>
                   {source.title}
                 </Text>
-                <Text style={styles.sourceUrl} numberOfLines={1}>
+                <Text style={[styles.sourceUrl, { color: colors.primary }]} numberOfLines={1}>
                   {new URL(source.url).hostname}
                 </Text>
               </TouchableOpacity>
@@ -246,7 +252,6 @@ export default function DigestDetailScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
   },
   loadingContainer: {
     flex: 1,
@@ -254,7 +259,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#888',
     marginTop: 10,
   },
   errorContainer: {
@@ -263,23 +267,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
-  errorIcon: {
-    fontSize: 64,
-    marginBottom: 20,
-  },
   errorText: {
     fontSize: 18,
-    color: '#888',
     marginBottom: 20,
+    marginTop: 20,
   },
   backButtonLarge: {
-    backgroundColor: '#fe591b',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
   },
   backButtonLargeText: {
-    color: '#fff',
     fontWeight: '600',
   },
   header: {
@@ -293,29 +291,19 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2a2a2a',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 20,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
   },
   shareButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2a2a2a',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  shareButtonText: {
-    fontSize: 18,
   },
   scrollView: {
     flex: 1,
@@ -323,10 +311,10 @@ const styles = StyleSheet.create({
   },
   metaSection: {
     marginBottom: 20,
+    marginTop: 20,
   },
   dateText: {
     fontSize: 13,
-    color: '#888',
     marginBottom: 12,
   },
   topicsRow: {
@@ -335,18 +323,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   topicBadge: {
-    backgroundColor: '#fe591b20',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
   },
   topicBadgeText: {
-    color: '#fe591b',
     fontSize: 12,
     fontWeight: '600',
   },
   contentSection: {
-    backgroundColor: '#2a2a2a',
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
@@ -354,63 +339,56 @@ const styles = StyleSheet.create({
   h1: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#fff',
     marginBottom: 16,
     marginTop: 8,
   },
   h2: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fe591b',
     marginBottom: 12,
     marginTop: 16,
   },
   h3: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ccc',
     marginBottom: 8,
     marginTop: 12,
   },
   paragraph: {
     fontSize: 15,
-    color: '#ddd',
     lineHeight: 24,
     marginBottom: 4,
   },
   bold: {
     fontWeight: '700',
-    color: '#fff',
   },
   hr: {
     height: 1,
-    backgroundColor: '#3a3a3a',
     marginVertical: 16,
   },
   sourcesSection: {
-    backgroundColor: '#2a2a2a',
     borderRadius: 16,
     padding: 16,
+  },
+  sourcesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sourcesTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
-    marginBottom: 12,
   },
   sourceItem: {
-    backgroundColor: '#3a3a3a',
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
   },
   sourceTitle: {
     fontSize: 14,
-    color: '#fff',
     marginBottom: 4,
   },
   sourceUrl: {
     fontSize: 12,
-    color: '#fe591b',
   },
 });

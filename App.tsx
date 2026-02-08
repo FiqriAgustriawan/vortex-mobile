@@ -3,7 +3,8 @@ import { StyleSheet, View, Text, TouchableOpacity, StatusBar } from 'react-nativ
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
-import { HomeIcon, HistoryIcon, ProfileIcon, ImageGenIcon } from './src/components/Icons';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { HomeIcon, HistoryIcon, ProfileIcon, ImageGenIcon, NewsIcon, ChatIcon } from './src/components/Icons';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
@@ -11,16 +12,21 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { ImageGenScreen } from './src/screens/ImageGenScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { GuestLoginScreen } from './src/screens/GuestLoginScreen';
+import AuthScreen from './src/screens/AuthScreen';
 import { CookieConsentPopup } from './src/components/CookieConsentPopup';
+import ProtectedRoute from './src/components/ProtectedRoute';
+import GuestLimitModal from './src/components/GuestLimitModal';
 import DigestSettingsScreen from './src/screens/DigestSettingsScreen';
 import DigestHistoryScreen from './src/screens/DigestHistoryScreen';
 import DigestDetailScreen from './src/screens/DigestDetailScreen';
+import SocialChatScreen from './src/screens/SocialChatScreen';
 import { setupNotificationResponseListener, setupNotificationReceivedListener } from './src/services/notifications';
+import { GlobalChatListener } from './src/components/GlobalChatListener';
 
-// Digest Icon Component
-const DigestIcon = ({ size, color }: { size: number; color: string; focused?: boolean }) => (
-  <Text style={{ fontSize: size - 2 }}>📰</Text>
-);
+// Digest Icon Component - Removed in favor of NewsIcon
+// const DigestIcon = ({ size, color }: { size: number; color: string; focused?: boolean }) => (
+//   <Text style={{ fontSize: size - 2 }}>📰</Text>
+// );
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -28,8 +34,8 @@ const STORAGE_KEYS = {
   GUEST_DATA: '@vortex_guest_data',
 };
 
-// Screen types - now includes digest screens
-type Screen = 'home' | 'history' | 'profile' | 'chat' | 'imagegen' | 'digestSettings' | 'digestHistory' | 'digestDetail';
+// Screen types - now includes digest and social screens
+type Screen = 'home' | 'history' | 'profile' | 'chat' | 'imagegen' | 'digestSettings' | 'digestHistory' | 'digestDetail' | 'socialChat';
 type AppState = 'loading' | 'onboarding' | 'login' | 'main';
 
 // Guest data type
@@ -42,21 +48,27 @@ interface GuestData {
 // Custom Tab Bar Component
 function TabBar({
   activeTab,
-  onTabPress
+  onTabPress,
+  isGuest
 }: {
   activeTab: Screen;
   onTabPress: (tab: Screen) => void;
+  isGuest: boolean;
 }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const tabs = [
-    { id: 'home' as Screen, label: 'Explore', Icon: HomeIcon },
-    { id: 'imagegen' as Screen, label: 'Imagen', Icon: ImageGenIcon },
-    { id: 'digestSettings' as Screen, label: 'Digest', Icon: DigestIcon },
-    { id: 'history' as Screen, label: 'Riwayat', Icon: HistoryIcon },
-    { id: 'profile' as Screen, label: 'Profil', Icon: ProfileIcon },
+  // All available tabs (Imagen moved to Explore screen)
+  const allTabs = [
+    { id: 'home' as Screen, label: 'Explore', Icon: HomeIcon, guestVisible: true },
+    { id: 'socialChat' as Screen, label: 'Social', Icon: ChatIcon, guestVisible: false },
+    { id: 'digestSettings' as Screen, label: 'Digest', Icon: NewsIcon, guestVisible: false },
+    { id: 'history' as Screen, label: 'Riwayat', Icon: HistoryIcon, guestVisible: false },
+    { id: 'profile' as Screen, label: 'Profil', Icon: ProfileIcon, guestVisible: true },
   ];
+
+  // Filter tabs based on guest status
+  const tabs = isGuest ? allTabs.filter(tab => tab.guestVisible) : allTabs;
 
   return (
     <View style={[
@@ -102,15 +114,73 @@ function TabBar({
 // Main App Content
 function AppContent() {
   const { colors, isDarkMode } = useTheme();
+  const { user, isGuest, isLoading: authLoading, session } = useAuth();
   const [appState, setAppState] = useState<AppState>('loading');
   const [guestData, setGuestData] = useState<GuestData | null>(null);
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [chatParams, setChatParams] = useState<{ modelId?: string; modelName?: string; conversationId?: string }>({});
+  const [showAuthScreen, setShowAuthScreen] = useState(false);
 
   // Check initial state
   useEffect(() => {
     checkInitialState();
+    setupNotifications();
   }, []);
+
+  // Handle auth state changes
+  useEffect(() => {
+    if (!authLoading) {
+      if (session || isGuest) {
+        // User is authenticated or in guest mode
+        if (appState === 'login') {
+          setAppState('main');
+        }
+      } else if (appState === 'main') {
+        // User logged out
+        setAppState('login');
+        setGuestData(null);
+        setCurrentScreen('home'); // Reset screen
+      }
+    }
+  }, [session, isGuest, authLoading, appState]);
+
+  const setupNotifications = async () => {
+    try {
+      // Register for push notifications
+      const { registerForPushNotifications, registerTokenWithBackend } = await import('./src/services/notifications');
+      const token = await registerForPushNotifications();
+
+      if (token) {
+        console.log('📱 Push Token:', token);
+        // We'll register the token with backend once we have a guest ID or logged in user
+        // For now just storing it locally via the service is enough as it saves to AsyncStorage
+      }
+
+      // Setup listeners
+      const { setupNotificationReceivedListener, setupNotificationResponseListener } = await import('./src/services/notifications');
+
+      const receivedSubscription = setupNotificationReceivedListener(notification => {
+        console.log('🔔 Notification received in foreground:', notification);
+      });
+
+      const responseSubscription = setupNotificationResponseListener((screen, params) => {
+        // Navigation logic for notification tap
+        if (screen === 'DigestDetail') {
+          setCurrentScreen('digestDetail');
+          setChatParams(params || {});
+        } else if (screen === 'DigestSettings') {
+          setCurrentScreen('digestSettings');
+        }
+      });
+
+      return () => {
+        receivedSubscription();
+        responseSubscription();
+      };
+    } catch (error) {
+      console.error('Error setting up notifications:', error);
+    }
+  };
 
   const checkInitialState = async () => {
     try {
@@ -124,8 +194,18 @@ function AppContent() {
       } else if (!storedGuestData) {
         setAppState('login');
       } else {
-        setGuestData(JSON.parse(storedGuestData));
+        const guest = JSON.parse(storedGuestData);
+        setGuestData(guest);
         setAppState('main');
+
+        // Update token with backend if we have a user
+        if (guest.token) {
+          const { getStoredPushToken, registerTokenWithBackend } = await import('./src/services/notifications');
+          const pushToken = await getStoredPushToken();
+          if (pushToken) {
+            registerTokenWithBackend(guest.username, pushToken);
+          }
+        }
       }
     } catch (error) {
       console.error('Error checking initial state:', error);
@@ -183,12 +263,23 @@ function AppContent() {
     );
   }
 
-  // Login
+  // Login - Now uses Supabase AuthScreen
   if (appState === 'login') {
     return (
       <>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        <GuestLoginScreen onComplete={handleLoginComplete} />
+        <AuthScreen
+          onGuestContinue={() => {
+            // Guest mode - set minimal guest data for backward compatibility
+            const guestDataCompat: GuestData = {
+              username: 'Guest',
+              purpose: 'Testing',
+              token: `guest_${Date.now()}`,
+            };
+            setGuestData(guestDataCompat);
+            setAppState('main');
+          }}
+        />
       </>
     );
   }
@@ -212,7 +303,7 @@ function AppContent() {
 
     switch (currentScreen) {
       case 'home':
-        return <HomeScreen onNavigateToChat={navigateToChat} guestName={guestData?.username} />;
+        return <HomeScreen onNavigateToChat={navigateToChat} onNavigateToImageGen={() => setCurrentScreen('imagegen')} guestName={guestData?.username} />;
       case 'imagegen':
         return <ImageGenScreen onGoBack={goBack} />;
       case 'history':
@@ -234,6 +325,8 @@ function AppContent() {
         return <DigestHistoryScreen navigation={digestNavigation} />;
       case 'digestDetail':
         return <DigestDetailScreen navigation={digestNavigation} route={{ params: { digestId: (chatParams as any).digestId } }} />;
+      case 'socialChat':
+        return <SocialChatScreen onGoBack={goBack} />;
       default:
         return <HomeScreen onNavigateToChat={navigateToChat} guestName={guestData?.username} />;
     }
@@ -254,11 +347,14 @@ function AppContent() {
       </View>
 
       {showTabBar && (
-        <TabBar activeTab={currentScreen} onTabPress={setCurrentScreen} />
+        <TabBar activeTab={currentScreen} onTabPress={setCurrentScreen} isGuest={isGuest} />
       )}
 
       {/* Cookie Consent Popup - shows once */}
       <CookieConsentPopup />
+
+      {/* Global Chat Listener for Notifications */}
+      <GlobalChatListener />
     </View>
   );
 }
@@ -267,7 +363,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

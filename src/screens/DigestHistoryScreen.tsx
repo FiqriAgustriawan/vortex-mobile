@@ -11,6 +11,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_CONFIG } from '../config/api';
 import { getDeviceId } from '../services/notifications';
+import {
+  BackIcon,
+  SettingsIcon,
+  TechIcon,
+  BusinessIcon,
+  SportsIcon,
+  EntertainmentIcon,
+  ScienceIcon,
+  GamingIcon,
+  WorldIcon,
+  IndonesiaIcon,
+  NewsIcon
+} from '../components/Icons';
+import { useTheme } from '../theme/ThemeContext';
 
 interface DigestItem {
   _id: string;
@@ -22,19 +36,20 @@ interface DigestItem {
   readAt?: string;
 }
 
-// Topic icons mapping
-const TOPIC_ICONS: Record<string, string> = {
-  technology: '🔧',
-  business: '💼',
-  sports: '⚽',
-  entertainment: '🎬',
-  science: '🔬',
-  gaming: '🎮',
-  world: '🌍',
-  indonesia: '🇮🇩',
+// Topic icons mapping with React Components
+const TOPIC_ICON_COMPONENTS: Record<string, React.FC<any>> = {
+  technology: TechIcon,
+  business: BusinessIcon,
+  sports: SportsIcon,
+  entertainment: EntertainmentIcon,
+  science: ScienceIcon,
+  gaming: GamingIcon,
+  world: WorldIcon,
+  indonesia: IndonesiaIcon,
 };
 
 export default function DigestHistoryScreen({ navigation }: any) {
+  const { colors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [digests, setDigests] = useState<DigestItem[]>([]);
@@ -106,76 +121,83 @@ export default function DigestHistoryScreen({ navigation }: any) {
 
   const renderDigestItem = ({ item }: { item: DigestItem }) => (
     <TouchableOpacity
-      style={[styles.digestCard, !item.readAt && styles.unreadCard]}
+      style={[
+        styles.digestCard,
+        { backgroundColor: colors.surface },
+        !item.readAt && { borderLeftWidth: 3, borderLeftColor: colors.primary }
+      ]}
       onPress={() => navigation.navigate('DigestDetail', { digestId: item._id })}
       activeOpacity={0.7}
     >
       <View style={styles.cardHeader}>
         <View style={styles.topicsRow}>
-          {item.topics.slice(0, 3).map((topic) => (
-            <Text key={topic} style={styles.topicBadge}>
-              {TOPIC_ICONS[topic] || '📰'}
-            </Text>
-          ))}
+          {item.topics.slice(0, 3).map((topic) => {
+            const IconComponent = TOPIC_ICON_COMPONENTS[topic] || NewsIcon;
+            return (
+              <View key={topic} style={{ marginRight: 8 }}>
+                <IconComponent size={16} color={colors.primary} />
+              </View>
+            );
+          })}
           {item.topics.length > 3 && (
-            <Text style={styles.moreBadge}>+{item.topics.length - 3}</Text>
+            <Text style={[styles.moreBadge, { color: colors.textSecondary }]}>+{item.topics.length - 3}</Text>
           )}
         </View>
-        <Text style={styles.dateText}>{formatDate(item.sentAt)}</Text>
+        <Text style={[styles.dateText, { color: colors.textTertiary }]}>{formatDate(item.sentAt)}</Text>
       </View>
 
-      <Text style={styles.cardTitle} numberOfLines={2}>
+      <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={2}>
         {item.title}
       </Text>
 
-      <Text style={styles.cardPreview} numberOfLines={2}>
+      <Text style={[styles.cardPreview, { color: colors.textSecondary }]} numberOfLines={2}>
         {getPreview(item.content)}
       </Text>
 
-      {!item.readAt && <View style={styles.unreadDot} />}
+      {!item.readAt && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
     </TouchableOpacity>
   );
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>📭</Text>
-      <Text style={styles.emptyTitle}>Belum Ada Digest</Text>
-      <Text style={styles.emptySubtitle}>
+      <NewsIcon size={64} color={colors.textTertiary} />
+      <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Belum Ada Digest</Text>
+      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
         Aktifkan Daily Digest di Settings untuk mulai menerima rangkuman berita harian
       </Text>
       <TouchableOpacity
-        style={styles.emptyButton}
+        style={[styles.emptyButton, { backgroundColor: colors.primary }]}
         onPress={() => navigation.navigate('DigestSettings')}
       >
-        <Text style={styles.emptyButtonText}>Buka Settings</Text>
+        <Text style={[styles.emptyButtonText, { color: colors.surface }]}>Buka Settings</Text>
       </TouchableOpacity>
     </View>
   );
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#fe591b" />
-          <Text style={styles.loadingText}>Memuat history...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Memuat history...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>←</Text>
+      <View style={[styles.header, { borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: colors.surface }]}>
+          <BackIcon size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Digest History</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Digest History</Text>
         <TouchableOpacity
           onPress={() => navigation.navigate('DigestSettings')}
-          style={styles.settingsButton}
+          style={[styles.settingsButton, { backgroundColor: colors.surface }]}
         >
-          <Text style={styles.settingsButtonText}>⚙️</Text>
+          <SettingsIcon size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -190,8 +212,8 @@ export default function DigestHistoryScreen({ navigation }: any) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#fe591b"
-            colors={['#fe591b']}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
       />
@@ -202,7 +224,6 @@ export default function DigestHistoryScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
   },
   loadingContainer: {
     flex: 1,
@@ -210,7 +231,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#888',
     marginTop: 10,
   },
   header: {
@@ -224,44 +244,29 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2a2a2a',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 20,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
   },
   settingsButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2a2a2a',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  settingsButtonText: {
-    fontSize: 18,
   },
   listContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
   digestCard: {
-    backgroundColor: '#2a2a2a',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     position: 'relative',
-  },
-  unreadCard: {
-    borderLeftWidth: 3,
-    borderLeftColor: '#fe591b',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -272,29 +277,21 @@ const styles = StyleSheet.create({
   topicsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  topicBadge: {
-    fontSize: 16,
   },
   moreBadge: {
     fontSize: 12,
-    color: '#888',
     marginLeft: 4,
   },
   dateText: {
     fontSize: 12,
-    color: '#888',
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
     marginBottom: 8,
   },
   cardPreview: {
     fontSize: 13,
-    color: '#888',
     lineHeight: 18,
   },
   unreadDot: {
@@ -304,7 +301,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#fe591b',
   },
   emptyState: {
     flex: 1,
@@ -313,31 +309,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     paddingTop: 100,
   },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 20,
-  },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#888',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: '#fe591b',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
   },
   emptyButtonText: {
-    color: '#fff',
     fontWeight: '600',
   },
 });

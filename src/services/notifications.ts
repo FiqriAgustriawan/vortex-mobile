@@ -1,18 +1,12 @@
+// Push Notification Service for Vortex AI
+// Uses expo-notifications for push notifications
+
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { API_CONFIG } from '../config/api';
-
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
 
 // Storage keys
 const PUSH_TOKEN_KEY = '@vortex_push_token';
@@ -24,23 +18,34 @@ export interface NotificationData {
   screen?: string;
 }
 
+// Configure notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 /**
- * Register for push notifications and get the Expo push token
+ * Register for push notifications
  * @returns Expo push token or null if failed
  */
 export async function registerForPushNotifications(): Promise<string | null> {
-  try {
-    // Check if physical device (push notifications don't work in simulator)
-    if (!Device.isDevice) {
-      console.log('⚠️ Push notifications only work on physical devices');
-      return null;
-    }
+  // Check if it's a physical device
+  if (!Device.isDevice) {
+    console.log('⚠️ Push notifications require a physical device');
+    return null;
+  }
 
+  try {
     // Check existing permissions
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
-    // Request permission if not granted
+    // Request permissions if not granted
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
@@ -51,37 +56,40 @@ export async function registerForPushNotifications(): Promise<string | null> {
       return null;
     }
 
-    // Get the push token
+    // Get Expo push token
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
     
-    const token = await Notifications.getExpoPushTokenAsync({
+    if (!projectId) {
+      console.error('❌ EAS Project ID not found in app config');
+      return null;
+    }
+
+    const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId,
     });
 
-    console.log('✅ Push token obtained:', token.data.substring(0, 30) + '...');
-    
-    // Store locally
-    await AsyncStorage.setItem(PUSH_TOKEN_KEY, token.data);
+    const token = tokenData.data;
+    console.log('✅ Push token obtained:', token);
 
-    // Set up Android-specific notification channel
+    // Store token locally
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
+
+    // Configure Android notification channel
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('digest', {
         name: 'Daily Digest',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FE591B',
+        lightColor: '#fe591b',
         sound: 'default',
-      });
-
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'General',
-        importance: Notifications.AndroidImportance.DEFAULT,
+        enableVibrate: true,
+        showBadge: true,
       });
     }
 
-    return token.data;
+    return token;
   } catch (error) {
-    console.error('Failed to get push token:', error);
+    console.error('❌ Failed to get push token:', error);
     return null;
   }
 }
@@ -99,8 +107,6 @@ export async function getStoredPushToken(): Promise<string | null> {
 
 /**
  * Register push token with our backend
- * @param userId The user ID
- * @param pushToken The Expo push token
  */
 export async function registerTokenWithBackend(userId: string, pushToken: string): Promise<boolean> {
   try {
@@ -113,6 +119,7 @@ export async function registerTokenWithBackend(userId: string, pushToken: string
     });
 
     const result = await response.json();
+    console.log('📤 Token registered with backend:', result.success);
     return result.success === true;
   } catch (error) {
     console.error('Failed to register token with backend:', error);
@@ -122,17 +129,18 @@ export async function registerTokenWithBackend(userId: string, pushToken: string
 
 /**
  * Set up notification response listener (when user taps notification)
- * @param onNavigate Callback to handle navigation
  */
 export function setupNotificationResponseListener(
   onNavigate: (screen: string, params: Record<string, any>) => void
 ): () => void {
-  const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+  const subscription = Notifications.addNotificationResponseReceivedListener(response => {
     const data = response.notification.request.content.data as NotificationData;
     
-    console.log('📱 Notification tapped:', data);
-    
-    if (data.type === 'digest' && data.digestId) {
+    console.log('📲 Notification tapped:', data);
+
+    if (data.screen) {
+      onNavigate(data.screen, { digestId: data.digestId });
+    } else if (data.digestId) {
       onNavigate('DigestDetail', { digestId: data.digestId });
     }
   });
@@ -142,26 +150,49 @@ export function setupNotificationResponseListener(
 
 /**
  * Set up listener for when app receives notification while in foreground
- * @param onReceive Callback to handle notification
  */
 export function setupNotificationReceivedListener(
   onReceive: (notification: Notifications.Notification) => void
 ): () => void {
-  const subscription = Notifications.addNotificationReceivedListener(onReceive);
+  const subscription = Notifications.addNotificationReceivedListener(notification => {
+    console.log('📬 Notification received:', notification.request.content.title);
+    onReceive(notification);
+  });
+
   return () => subscription.remove();
 }
 
 /**
- * Schedule a local test notification (for debugging)
+ * Schedule a local test notification
  */
 export async function scheduleTestNotification(): Promise<void> {
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: '📰 Test Digest',
-      body: 'This is a test notification from Vortex AI!',
+      title: '🔔 Test Notification',
+      body: 'Ini adalah test notifikasi dari Vortex AI!',
       data: { type: 'test' },
+      sound: 'default',
     },
-    trigger: { seconds: 2 },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 2,
+    },
+  });
+  console.log('📤 Test notification scheduled');
+}
+
+/**
+ * Show a local notification immediately
+ */
+export async function showLocalNotification(title: string, body: string, data: any = {}): Promise<void> {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      data,
+      sound: 'default',
+    },
+    trigger: null, // Show immediately
   });
 }
 
@@ -181,4 +212,40 @@ export async function getDeviceId(): Promise<string> {
   } catch {
     return `temp-${Date.now()}`;
   }
+}
+
+/**
+ * Check if push notifications are available
+ */
+export function isPushNotificationsAvailable(): boolean {
+  return Device.isDevice;
+}
+
+/**
+ * Get badge count
+ */
+export async function getBadgeCount(): Promise<number> {
+  try {
+    return await Notifications.getBadgeCountAsync();
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Clear badge count
+ */
+export async function clearBadgeCount(): Promise<void> {
+  try {
+    await Notifications.setBadgeCountAsync(0);
+  } catch {
+    console.error('Failed to clear badge count');
+  }
+}
+
+/**
+ * Cancel all scheduled notifications
+ */
+export async function cancelAllScheduledNotifications(): Promise<void> {
+  await Notifications.cancelAllScheduledNotificationsAsync();
 }

@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { VortexLogoSimple } from '../components/VortexLogo';
 import { VORTEX_MODELS } from '../config/api';
 import {
   FlashIcon, BrainIcon, CodeIcon, SparkleIcon,
   ArrowRightIcon, LightbulbIcon, PencilIcon, SearchIcon, TerminalIcon,
-  ChevronRightIcon
+  ChevronRightIcon, ImageGenIcon
 } from '../components/Icons';
 
 interface HomeScreenProps {
   onNavigateToChat: (params?: { modelId?: string; modelName?: string }) => void;
+  onNavigateToImageGen?: () => void;
   guestName?: string;
 }
 
@@ -37,9 +39,30 @@ const quickPrompts = [
   { id: '4', label: 'Review code', IconComponent: PencilIcon },
 ];
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToChat, guestName }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToChat, onNavigateToImageGen, guestName }) => {
   const { colors } = useTheme();
+  const { user, isGuest, getProfile } = useAuth();
   const insets = useSafeAreaInsets();
+  const [displayName, setDisplayName] = useState<string>(guestName || 'Developer');
+
+  // Fetch user profile for displayname
+  useEffect(() => {
+    const fetchDisplayName = async () => {
+      if (user && !isGuest) {
+        const profile = await getProfile();
+        if (profile.username) {
+          setDisplayName(profile.username);
+        } else if (user.user_metadata?.username) {
+          setDisplayName(user.user_metadata.username);
+        } else if (user.email) {
+          setDisplayName(user.email.split('@')[0]);
+        }
+      } else if (guestName) {
+        setDisplayName(guestName);
+      }
+    };
+    fetchDisplayName();
+  }, [user, isGuest, guestName, getProfile]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -62,7 +85,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToChat, guestN
         </View>
 
         <Text style={[styles.welcomeText, { color: colors.textPrimary }]}>
-          Halo, {guestName || 'Developer'}!
+          Halo, {displayName}!
         </Text>
         <Text style={[styles.welcomeSubtext, { color: colors.textSecondary }]}>
           Siap membantu coding, analisis, dan penalaran
@@ -88,6 +111,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToChat, guestN
             <ArrowRightIcon size={20} color="#FFFFFF" />
           </View>
         </TouchableOpacity>
+
+        {/* AI Image Generation */}
+        {onNavigateToImageGen && (
+          <TouchableOpacity
+            style={[styles.imageGenCard, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+            onPress={onNavigateToImageGen}
+          >
+            <View style={styles.quickStartContent}>
+              <View style={[styles.imageGenIconBg, { backgroundColor: '#8B5CF6' + '20' }]}>
+                <ImageGenIcon size={24} color="#8B5CF6" />
+              </View>
+              <View style={styles.quickStartInfo}>
+                <Text style={[styles.imageGenTitle, { color: colors.textPrimary }]}>Generate Gambar AI</Text>
+                <Text style={[styles.imageGenDesc, { color: colors.textSecondary }]}>Buat gambar dengan AI</Text>
+              </View>
+            </View>
+            <ChevronRightIcon size={20} color={colors.textTertiary} />
+          </TouchableOpacity>
+        )}
 
         {/* Quick Prompts */}
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Quick Actions</Text>
@@ -184,4 +226,8 @@ const styles = StyleSheet.create({
   capTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   capText: { fontSize: 10 },
   footer: { height: 20 },
+  imageGenCard: { borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, borderWidth: 1 },
+  imageGenIconBg: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  imageGenTitle: { fontSize: 16, fontWeight: '600' },
+  imageGenDesc: { fontSize: 12, marginTop: 2 },
 });

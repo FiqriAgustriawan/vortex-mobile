@@ -1,17 +1,18 @@
-
 import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch,
-  Alert, Platform, NativeModules, DevSettings
+  Alert, Platform, NativeModules, DevSettings, Image, ActivityIndicator, TextInput, Modal
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { VortexLogoSimple } from '../components/VortexLogo';
+import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
+import * as ImagePicker from 'expo-image-picker';
 import {
-  MoonIcon, NotificationIcon, GlobeIcon, StorageIcon, TrashIcon,
-  HelpIcon, FeedbackIcon, InfoIcon, SoundIcon, FontSizeIcon, ChevronRightIcon
+  MoonIcon, NotificationIcon, GlobeIcon, StorageIcon, TrashIcon, LogoutIcon,
+  HelpIcon, FeedbackIcon, InfoIcon, SoundIcon, FontSizeIcon, ChevronRightIcon, EditIcon
 } from '../components/Icons';
 
 interface SettingItem {
@@ -64,7 +65,7 @@ const settingsGroups: SettingGroup[] = [
       { id: 'help', IconComponent: HelpIcon, label: 'Pusat Bantuan', type: 'link' },
       { id: 'feedback', IconComponent: FeedbackIcon, label: 'Kirim Feedback', type: 'link' },
       { id: 'about', IconComponent: InfoIcon, label: 'Tentang Aplikasi', type: 'link' },
-      { id: 'reset', IconComponent: TrashIcon, label: 'Reset Aplikasi', type: 'link' },
+      { id: 'logout', IconComponent: LogoutIcon, label: 'Keluar', type: 'link' },
     ],
   },
 ];
@@ -79,10 +80,29 @@ const purposeLabels: Record<string, string> = {
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ guestData }) => {
   const { colors, isDarkMode, toggleTheme } = useTheme();
+  const { user, isGuest, signOut, updateAvatar, updateUsername, getProfile } = useAuth();
   const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = React.useState(true);
   const [sound, setSound] = React.useState(true);
   const [resetModalVisible, setResetModalVisible] = React.useState(false);
+  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
+  const [avatarLoading, setAvatarLoading] = React.useState(false);
+  const [username, setUsername] = React.useState<string>('');
+  const [usernameModalVisible, setUsernameModalVisible] = React.useState(false);
+  const [newUsernameInput, setNewUsernameInput] = React.useState('');
+  const [savingUsername, setSavingUsername] = React.useState(false);
+
+  // Fetch profile on mount
+  React.useEffect(() => {
+    const loadProfile = async () => {
+      if (user && !isGuest) {
+        const profile = await getProfile();
+        if (profile.username) setUsername(profile.username);
+        if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
+      }
+    };
+    loadProfile();
+  }, [user, isGuest]);
 
   const getToggleValue = (id: string) => {
     if (id === 'darkmode') return isDarkMode;
@@ -97,55 +117,134 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ guestData }) => {
     if (id === 'sound') setSound(!sound);
   };
 
-  const handleResetPress = () => {
+  const handleLogoutPress = () => {
     setResetModalVisible(true);
   };
 
-  const handleConfirmReset = async () => {
+  const handleConfirmLogout = async () => {
     try {
-      // 1. Clear explicit keys first
-      const keys = ['@vortex_has_onboarded', '@vortex_guest_data', 'vortex_cookie_consent', 'vortex_cookie_consent_shown'];
-      await AsyncStorage.multiRemove(keys);
-
-      // 2. Clear everything else
-      await AsyncStorage.clear();
-
       setResetModalVisible(false);
-
-      // 3. Clear Web LocalStorage
-      if (Platform.OS === 'web') {
-        localStorage.clear();
-        window.location.reload();
-        return;
-      }
-
-      // 4. Try to reload mobile app
-      if (NativeModules.DevSettings) {
-        NativeModules.DevSettings.reload();
-      } else if (DevSettings) {
-        DevSettings.reload();
-      } else {
-        // Fallback message
-        Alert.alert('Sukses', 'Data berhasil dihapus. Silakan tutup dan buka kembali aplikasi secara manual.');
-      }
+      await signOut();
+      // SignOut will redirect to auth screen automatically
     } catch (e) {
-      console.error('Reset error:', e);
-      setResetModalVisible(false);
-      Alert.alert('Error', 'Gagal mereset data.');
+      console.error('Logout error:', e);
+      Alert.alert('Error', 'Gagal keluar. Silakan coba lagi.');
     }
   };
 
-  const displayName = guestData?.username || 'Pengguna';
-  const displayPurpose = guestData?.purpose ? purposeLabels[guestData.purpose] : 'Guest';
+  const displayName = username || user?.email?.split('@')[0] || guestData?.username || 'Pengguna';
+  const displayEmail = user?.email || null;
+  const displayPurpose = isGuest ? 'Guest' : (guestData?.purpose ? purposeLabels[guestData.purpose] : 'Member');
+
+  const handleEditUsername = () => {
+    if (isGuest) {
+      Alert.alert('Tidak Tersedia', 'Login untuk mengubah username');
+      return;
+    }
+    setNewUsernameInput(username);
+    setUsernameModalVisible(true);
+  };
+
+  const handleSaveUsername = async () => {
+    if (!newUsernameInput.trim()) {
+      Alert.alert('Error', 'Username tidak boleh kosong');
+      return;
+    }
+
+    setSavingUsername(true);
+    const { success, error } = await updateUsername(newUsernameInput.trim());
+    setSavingUsername(false);
+
+    if (success) {
+      setUsername(newUsernameInput.trim());
+      setUsernameModalVisible(false);
+      Alert.alert('Sukses', 'Username berhasil diperbarui!');
+    } else {
+      Alert.alert('Error', error?.message || 'Gagal memperbarui username');
+    }
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Keluar',
+      'Apakah Anda yakin ingin keluar?',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Keluar',
+          style: 'destructive',
+          onPress: async () => {
+            await signOut();
+            await AsyncStorage.clear();
+            if (NativeModules.DevSettings) {
+              NativeModules.DevSettings.reload();
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handlePickImage = async () => {
+    if (isGuest) {
+      Alert.alert('Tidak Tersedia', 'Login untuk mengubah foto profil');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setAvatarLoading(true);
+        const { url, error } = await updateAvatar(result.assets[0].uri);
+
+        if (error) {
+          Alert.alert('Error', 'Gagal mengupload foto. Pastikan bucket "avatars" sudah dibuat di Supabase.');
+        } else if (url) {
+          setAvatarUrl(url);
+          Alert.alert('Sukses', 'Foto profil berhasil diperbarui!');
+        }
+        setAvatarLoading(false);
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Error', 'Gagal memilih gambar');
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* Profile Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
-          <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
-        </View>
-        <Text style={[styles.name, { color: colors.textPrimary }]}>{displayName}</Text>
+        <TouchableOpacity
+          onPress={handlePickImage}
+          style={[styles.avatarContainer, { backgroundColor: colors.primary }]}
+        >
+          {avatarLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+          )}
+          <View style={[styles.editBadge, { backgroundColor: colors.primary }]}>
+            <EditIcon size={14} color="#FFFFFF" />
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleEditUsername}>
+          <Text style={[styles.name, { color: colors.textPrimary }]}>{displayName}</Text>
+          {!isGuest && (
+            <Text style={[styles.editHint, { color: colors.textTertiary }]}>Tap untuk edit username</Text>
+          )}
+        </TouchableOpacity>
+        {displayEmail && (
+          <Text style={[styles.email, { color: colors.textSecondary }]}>{displayEmail}</Text>
+        )}
         <View style={[styles.purposeBadge, { backgroundColor: colors.primary + '15' }]}>
           <Text style={[styles.purposeText, { color: colors.primary }]}>{displayPurpose}</Text>
         </View>
@@ -182,7 +281,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ guestData }) => {
                   ]}
                   onPress={() => {
                     if (item.type === 'toggle') handleToggle(item.id);
-                    if (item.id === 'reset') handleResetPress();
+                    if (item.id === 'logout') handleLogoutPress();
                   }}
                   disabled={item.type === 'toggle'}
                 >
@@ -220,17 +319,65 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ guestData }) => {
         </View>
       </ScrollView>
 
-      {/* Reset Confirmation Modal */}
+      {/* Logout Confirmation Modal */}
       <ConfirmModal
         visible={resetModalVisible}
-        title="Reset Aplikasi"
-        message="Tindakan ini akan menghapus semua data lokal, riwayat chat, dan login. Aplikasi akan kembali ke kondisi awal seperti baru diinstall."
-        confirmText="Reset Sekarang"
+        title="Keluar dari Akun"
+        message="Apakah kamu yakin ingin keluar dari akun ini?"
+        confirmText="Keluar"
         cancelText="Batal"
-        onConfirm={handleConfirmReset}
+        onConfirm={handleConfirmLogout}
         onCancel={() => setResetModalVisible(false)}
         isDanger={true}
       />
+
+      {/* Username Edit Modal */}
+      <Modal
+        visible={usernameModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setUsernameModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Edit Username</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+              Masukkan username baru:
+            </Text>
+            <TextInput
+              style={[styles.usernameInput, {
+                backgroundColor: colors.background,
+                color: colors.textPrimary,
+                borderColor: colors.border
+              }]}
+              value={newUsernameInput}
+              onChangeText={setNewUsernameInput}
+              placeholder="Username"
+              placeholderTextColor={colors.textTertiary}
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.surfaceSecondary }]}
+                onPress={() => setUsernameModalVisible(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Batal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleSaveUsername}
+                disabled={savingUsername}
+              >
+                {savingUsername ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>Simpan</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -238,9 +385,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ guestData }) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { alignItems: 'center', padding: 24, borderBottomWidth: 1 },
-  avatarContainer: { width: 90, height: 90, borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  avatarContainer: { width: 90, height: 90, borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 16, position: 'relative' },
   avatarText: { fontSize: 40, fontWeight: 'bold', color: '#FFFFFF' },
-  name: { fontSize: 22, fontWeight: 'bold' },
+  avatarImage: { width: 90, height: 90, borderRadius: 45 },
+  editBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
+  editBadgeText: { fontSize: 12 },
+  name: { fontSize: 22, fontWeight: 'bold', textAlign: 'center' },
+  email: { fontSize: 14, marginTop: 4 },
   purposeBadge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginTop: 8 },
   purposeText: { fontSize: 14, fontWeight: '600' },
   statsContainer: { flexDirection: 'row', marginTop: 20, borderRadius: 16, padding: 16, width: '100%' },
@@ -259,5 +410,14 @@ const styles = StyleSheet.create({
   versionContainer: { alignItems: 'center', marginTop: 8, marginBottom: 32 },
   versionText: { fontSize: 13, fontWeight: '500', marginTop: 8 },
   versionSubtext: { fontSize: 11, marginTop: 4 },
+  editHint: { fontSize: 12, marginTop: 4, textAlign: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', maxWidth: 400, borderRadius: 16, padding: 24 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 },
+  modalSubtitle: { fontSize: 14, textAlign: 'center', marginBottom: 16 },
+  usernameInput: { borderWidth: 1, borderRadius: 12, padding: 14, fontSize: 16, marginBottom: 20 },
+  modalButtons: { flexDirection: 'row', gap: 12 },
+  modalButton: { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center' },
+  modalButtonText: { fontSize: 16, fontWeight: '600' },
 });
 
